@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg_dark">#0a0a14</color>
+    <style name="AppTheme" parent="android:Theme.NoTitleBar.Fullscreen">
+        <item name="android:windowBackground">@color/bg_dark</item>
+    </style>
+</resources>
