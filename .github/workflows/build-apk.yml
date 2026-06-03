@@ -1,0 +1,62 @@
+name: Build Zenflow APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Sign APK
+        run: |
+          keytool -genkey -v \
+            -keystore zenflow-release.jks \
+            -alias zenflow \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass zenflow123 -keypass zenflow123 \
+            -dname "CN=Zenflow, OU=App, O=Zenflow, L=Nairobi, S=Nairobi, C=KE"
+          zipalign -v 4 \
+            app/build/outputs/apk/release/app-release-unsigned.apk \
+            app/build/outputs/apk/release/zenflow-aligned.apk
+          apksigner sign \
+            --ks zenflow-release.jks --ks-key-alias zenflow \
+            --ks-pass pass:zenflow123 --key-pass pass:zenflow123 \
+            --out app/build/outputs/apk/release/Zenflow.apk \
+            app/build/outputs/apk/release/zenflow-aligned.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Zenflow-APK
+          path: app/build/outputs/apk/release/Zenflow.apk
+          retention-days: 30
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: "Zenflow v1.0.${{ github.run_number }}"
+          files: app/build/outputs/apk/release/Zenflow.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
